@@ -1,0 +1,46 @@
+using DifferentialEquations
+using Plots
+
+# Model I: base model, no compaction, no resource limitation
+# state u = [P, Q, D]
+function model1!(du, u, p, t)
+    P, Q, D = u
+    α, β, γ, δP, δQ, K = p
+    du[1] = α*(1-(P+Q)/K)*P + γ*Q - β*P - δP*P
+    du[2] = β*P - γ*Q - δQ*Q
+    du[3] = δP*P + δQ*Q
+end
+
+# p = [α, β, γ, δP, δQ, K] -- illustrative, not fitted to data
+# α, β already evaluated at κ = 0.2 kPa (soft) or 8 kPa (stiff), 3D geometry
+params = Dict(
+    (:MCF10A, :soft)  => [0.2490, 0.0501, 0.10, 0.02, 0.010, 1000.0],
+    (:MCF10A, :stiff) => [0.2130, 0.0540, 0.10, 0.02, 0.010, 1000.0],
+    (:MCF7,   :soft)  => [0.3479, 0.0602, 0.12, 0.02, 0.010, 1000.0],
+    (:MCF7,   :stiff) => [0.2753, 0.0672, 0.12, 0.02, 0.010, 1000.0],
+    (:TNBC,   :soft)  => [0.5413, 0.0401, 0.08, 0.03, 0.015, 1000.0],
+    (:TNBC,   :stiff) => [0.2900, 0.0432, 0.08, 0.03, 0.015, 1000.0],
+)
+
+colors = Dict(:MCF10A => :gray, :MCF7 => :blue, :TNBC => :red)
+styles = Dict(:soft => :dash, :stiff => :solid)
+
+tspan = (0.0, 14.0)
+u0 = [10.0, 0.0, 0.0]
+
+plt = plot(layout=(1,3), size=(1800,600), legend=:topleft, xlabel="time (days)",
+           guidefontsize=13, tickfontsize=11, titlefontsize=15, legendfontsize=9,
+           left_margin=10Plots.mm, bottom_margin=10Plots.mm)
+
+for ((cell, cond), p) in params
+    prob = ODEProblem(model1!, u0, tspan, p)
+    sol = solve(prob, saveat=0.1)
+    lbl = "$cell $cond"
+    plot!(plt[1], sol.t, sol[1,:], color=colors[cell], ls=styles[cond], label=lbl)
+    plot!(plt[2], sol.t, sol[2,:], color=colors[cell], ls=styles[cond], label=lbl)
+    plot!(plt[3], sol.t, sol[3,:], color=colors[cell], ls=styles[cond], label=lbl)
+end
+
+plot(plt, title=["P (proliferating)" "Q (dormant)" "D (dead)"])
+savefig(plt, "model1_dynamics.png")
+display(plt)

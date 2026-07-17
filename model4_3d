@@ -1,0 +1,54 @@
+using DifferentialEquations
+using Plots
+
+# Model 4_3d
+function model4!(du, u, p, t)
+    P, Q, D, σ, R = u
+    α, β, γ, δP, δQ, β0σ, g, δσ, σα, σβ, σd, ηβ, ηd, ρ, Ks, R0, eP, eQ, Kr, βr = p
+    fs = max(1 - (P+Q)/Ks, 0.0)
+    fr = max(R,0.0)/(Kr + max(R,0.0))
+    Φα = 1/(1 + σ/σα)
+    Φβ = 1 + ηβ/(1 + σ/σβ)
+    Φδ = 1 + ηd/(1 + σ/σd)
+    dormancy_flux = (β*Φβ + βr*(1-fr))*P
+    du[1] = α*Φα*fs*fr*P + γ*Φα*fr*Q - dormancy_flux - δP*Φδ*P
+    du[2] = dormancy_flux - γ*Φα*fr*Q - δQ*Q
+    du[3] = δP*Φδ*P + δQ*Q
+    du[4] = (β0σ/g)*α*P - δσ*σ
+    du[5] = ρ*(R0-R) - eP*P - eQ*Q
+end
+
+# p = [α, β, γ, δP, δQ, β0σ, g, δσ, σα, σβ, σd, ηβ, ηd, ρ, Ks, R0, eP, eQ, Kr, βr]
+params = Dict(
+    (:MCF10A, :soft)  => [0.2490, 0.0501, 0.10, 0.02, 0.010, 0.02, 3, 0.25, 1.4, 0.7, 7.0, 1.5, 2.0, 1.6667, 1000.0, 1.0, 0.010, 0.002, 0.3, 0.3],
+    (:MCF10A, :stiff) => [0.2130, 0.0540, 0.10, 0.02, 0.010, 0.02, 3, 0.25, 1.4, 0.7, 7.0, 1.5, 2.0, 0.2222, 1000.0, 1.0, 0.010, 0.002, 0.3, 0.3],
+    (:MCF7,   :soft)  => [0.3479, 0.0602, 0.12, 0.02, 0.010, 0.02, 3, 0.25, 1.0, 0.5, 5.0, 1.5, 2.0, 1.6667, 1000.0, 1.0, 0.014, 0.002, 0.3, 0.3],
+    (:MCF7,   :stiff) => [0.2753, 0.0672, 0.12, 0.02, 0.010, 0.02, 3, 0.25, 1.0, 0.5, 5.0, 1.5, 2.0, 0.2222, 1000.0, 1.0, 0.014, 0.002, 0.3, 0.3],
+    (:TNBC,   :soft)  => [0.5413, 0.0401, 0.08, 0.03, 0.015, 0.02, 3, 0.25, 0.6, 0.3, 3.0, 1.5, 2.0, 1.6667, 1000.0, 1.0, 0.025, 0.002, 0.3, 0.3],
+    (:TNBC,   :stiff) => [0.2900, 0.0432, 0.08, 0.03, 0.015, 0.02, 3, 0.25, 0.6, 0.3, 3.0, 1.5, 2.0, 0.2222, 1000.0, 1.0, 0.025, 0.002, 0.3, 0.3],
+)
+
+colors = Dict(:MCF10A => :gray, :MCF7 => :blue, :TNBC => :red)
+styles = Dict(:soft => :solid, :stiff => :dash)
+
+tspan = (0.0, 14.0)
+u0 = [10.0, 0.0, 0.0, 0.0, 1.0]
+
+plt = plot(layout=(2,3), size=(1800,1000), legend=:topleft, xlabel="time (days)",
+           guidefontsize=13, tickfontsize=11, titlefontsize=15, legendfontsize=9,
+           left_margin=10Plots.mm, bottom_margin=10Plots.mm)
+
+for ((cell, cond), p) in params
+    prob = ODEProblem(model4!, u0, tspan, p)
+    sol = solve(prob, saveat=0.1)
+    lbl = "$cell $cond"
+    plot!(plt[1], sol.t, sol[1,:], color=colors[cell], ls=styles[cond], label=lbl)
+    plot!(plt[2], sol.t, sol[2,:], color=colors[cell], ls=styles[cond], label=lbl)
+    plot!(plt[3], sol.t, sol[3,:], color=colors[cell], ls=styles[cond], label=lbl)
+    plot!(plt[4], sol.t, sol[4,:], color=colors[cell], ls=styles[cond], label=lbl)
+    plot!(plt[5], sol.t, sol[5,:], color=colors[cell], ls=styles[cond], label=lbl)
+end
+
+plot(plt, title=["P (proliferating)" "Q (dormant)" "D (dead)" "σ (compaction stress)" "R (resource)" ""])
+savefig(plt, "model4_3d_dynamics.png")
+display(plt)
