@@ -1,8 +1,7 @@
 using DifferentialEquations
 using Plots
 
-# Model I: base model, no compaction, no resource limitation
-# state u = [P, Q, D]
+# Model I
 function model1!(du, u, p, t)
     P, Q, D = u
     α, β, γ, δP, δQ, K = p
@@ -11,8 +10,7 @@ function model1!(du, u, p, t)
     du[3] = δP*P + δQ*Q
 end
 
-# p = [α, β, γ, δP, δQ, K] -- illustrative, not fitted to data
-# α, β already evaluated at κ = 0.2 kPa (soft) or 8 kPa (stiff), 3D geometry
+# p = [α, β, γ, δP, δQ, K]
 params = Dict(
     (:MCF10A, :soft)  => [0.2490, 0.0501, 0.10, 0.02, 0.010, 1000.0],
     (:MCF10A, :stiff) => [0.2130, 0.0540, 0.10, 0.02, 0.010, 1000.0],
@@ -41,6 +39,7 @@ for ((cell, cond), p) in params
     plot!(plt[3], sol.t, sol[3,:], color=colors[cell], ls=styles[cond], label=lbl)
 end
 
-plot(plt, title=["P (proliferating)" "Q (dormant)" "D (dead)"])
-savefig(plt, "model1_dynamics.png")
+plot!(plt, title=["P (proliferating)" "Q (dormant)" "D (dead)"])
+plot!(plt, ylims=(0, 200))  
+savefig(plt, "model1_no_compaction_dynamics.png")
 display(plt)
